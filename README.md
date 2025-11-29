@@ -1,36 +1,164 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Intercom → HubSpot Integration
 
-## Getting Started
+A Next.js application that synchronizes Intercom contacts and companies to HubSpot with associations.
 
-First, run the development server:
+## Features
+
+✅ OAuth 2.0 authentication with Intercom  
+✅ Fetch paginated Intercom contacts & companies  
+✅ Upsert into HubSpot (create/update)  
+✅ Create Contact ↔ Company associations  
+✅ Idempotency via Intercom ID storage  
+✅ Comprehensive logging & error handling  
+
+## Setup Instructions
+
+### 1. Prerequisites
+
+- Node.js 16+
+- Intercom workspace
+- HubSpot account
+
+### 2. Intercom Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Create Intercom Developer App
+1. Go to https://app.intercom.com/developers
+2. Create New App
+3. Set OAuth Redirect URI: http://localhost:3000/api/auth/callback
+4. Copy Client ID & Client Secret
+5. Select Scopes:
+   - read_users
+   - write_users
+   - read_companies
+   - write_companies
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. HubSpot Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Create Private App
+1. Go to https://app.hubspot.com/
+2. Settings → Integrations → Private Apps
+3. Create App
+4. Set Scopes:
+   - crm.objects.contacts.read
+   - crm.objects.contacts.write
+   - crm.objects.companies.read
+   - crm.objects.companies.write
+   - crm.objects.contacts.manage
+5. Copy Private App Access Token
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Environment Configuration
 
-## Learn More
+```bash
+# .env.local
+INTERCOM_CLIENT_ID=your_client_id
+INTERCOM_CLIENT_SECRET=your_client_secret
+INTERCOM_AUTH_URL=https://app.intercom.com/oauth
+INTERCOM_TOKEN_URL=https://api.intercom.io/auth/eagle/token
+INTERCOM_API_BASE=https://api.intercom.io
 
-To learn more about Next.js, take a look at the following resources:
+HUBSPOT_API_KEY=your_hubspot_private_app_key
+HUBSPOT_API_BASE=https://api.hubapi.com
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+NEXTAUTH_URL=http://localhost:3000
+REDIRECT_URI=http://localhost:3000/api/auth/callback
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. Installation & Running
 
-## Deploy on Vercel
+```bash
+# Install dependencies
+npm install
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Run development server
+npm run dev
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Build for production
+npm run build
+npm start
+```
+
+Visit: http://localhost:3000
+
+### 6. Usage
+
+1. Click **"Authorize with Intercom"**
+2. Grant permissions
+3. Redirected to dashboard
+4. Click **"Start Sync"**
+5. Monitor logs and results
+
+## Sync Flow
+
+1. **OAuth Authorization** - Get access token from Intercom
+2. **Fetch Companies** - Paginate through all Intercom companies
+3. **Upsert Companies** - Create/update in HubSpot
+4. **Fetch Contacts** - Paginate through all Intercom users
+5. **Upsert Contacts** - Create/update in HubSpot
+6. **Create Associations** - Link contacts to their companies
+7. **Log Results** - Display comprehensive sync log
+
+## API Endpoints
+
+- `GET /api/status` - Health check
+- `POST /api/sync/start` - Start sync process
+- `GET /api/auth/callback` - OAuth callback handler
+
+## File Mapping
+
+- Intercom Users → HubSpot Contacts
+- Intercom Companies → HubSpot Companies
+- Intercom User.companies[0] → Contact-Company Association
+
+## Idempotency
+
+Intercom IDs are stored in custom HubSpot properties:
+- Contact: `intercom_contact_id`
+- Company: `intercom_company_id`
+
+This ensures upserts don't create duplicates.
+
+## Example Output
+
+```json
+{
+  "success": true,
+  "summary": {
+    "companiesSynced": 5,
+    "contactsSynced": 23,
+    "log": [
+      {
+        "timestamp": "2024-01-15T10:30:45.123Z",
+        "message": "Starting full sync: Intercom → HubSpot"
+      },
+      ...
+    ]
+  }
+}
+```
+
+## Troubleshooting
+
+**OAuth token not received:**
+- Check redirect URI matches exactly
+- Verify client ID & secret are correct
+
+**Upsert failures:**
+- Ensure HubSpot custom properties exist
+- Check API key has correct scopes
+
+**Association errors:**
+- Verify both contact and company were created
+- Check HubSpot API limits
+
+## Time Estimate
+
+⏱️ **1-2 hours** with AI assistance (Claude, ChatGPT)
+
+## Support
+
+For Intercom API docs: https://developers.intercom.com/
+For HubSpot API docs: https://developers.hubspot.com/
